@@ -1,19 +1,29 @@
 #pragma once
 
+// https://en.wikipedia.org/wiki/Plant_anatomy#/media/File:Plant_Anatomy.svg
+
+
 class Organic
 {
 public:
-    Organic(float initialEnergy, float energyInputRate = 10.0f, float energyOutputRate = 0.0f)
+    Organic(float initialEnergy, float energyInputRate = 0.0f, float energyOutputRate = 0.0f)
         : _energyStored(initialEnergy)
         , _energyInputRate(energyInputRate)
         , _energyOutputRate(energyOutputRate)
     {
     }
 
-    float GiveEnergy(const float energyGiven)
+    float TransferEnergy(Organic& receiver, float amount)
+    {
+        // Return effectively transferred energy
+        return receiver.GiveEnergy(TakeEnergy(amount));
+    }
+
+    float GiveEnergy(float energyGiven)
     {
         float unusedEnergy = 0.0f;
-        if(energyGiven <= _energyInputRate)
+
+        if (energyGiven <= _energyInputRate || _energyInputRate == 0.0f)
         {
             _energyStored += energyGiven;
         }
@@ -22,12 +32,19 @@ public:
             _energyStored += _energyInputRate;
             unusedEnergy = energyGiven - _energyInputRate;
         }
+
         return unusedEnergy;
     }
 
-    float TakeEnergy(const float energyRequested)
+    float TakeEnergy(float energyRequested)
     {
+        if(_energyOutputRate != 0.0f && energyRequested <= _energyOutputRate)
+        {
+            energyRequested = _energyOutputRate;
+        }
+
         float energyTaken = energyRequested;
+
         if(energyRequested <= _energyStored)
         {
             _energyStored -= energyRequested;
@@ -37,22 +54,8 @@ public:
             energyTaken = _energyStored;
             _energyStored = 0.0f;
         }
-        return energyTaken;
-    }
 
-    float Update()
-    {
-        float energyLost = _energyStored;
-        if(_energyStored <= _energyOutputRate)
-        {
-            _energyStored = 0.0f;
-        }
-        else
-        {
-            _energyStored -= _energyOutputRate;
-            energyLost = _energyOutputRate;
-        }
-        return energyLost;
+        return energyTaken;
     }
 
     float GetEnergy() const

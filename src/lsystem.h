@@ -11,9 +11,8 @@ public:
     struct Node
     {
         LSystem& lsystem;
-        PosQuat origin;
-        PosQuat end;
-        SharedPtr<Node> source;
+        Position3D origin;
+        SharedPtr<Node> parent;
         Vector<SharedPtr<Node>> edges;
 
         Node(LSystem& lsystem) : lsystem(lsystem)
@@ -27,7 +26,7 @@ public:
         virtual void Grow(void* userData) = 0;
     };
 
-    using Iterator = Vector<SharedPtr<Node>>::iterator;
+    using Iterator = List<SharedPtr<Node>>::iterator;
 
 public:
 
@@ -36,56 +35,102 @@ public:
     {
         _nodes.clear();
         _nodes.emplace_back(SharedPtr<T>(new T(*this, std::forward<Args>(args)...)));
-        _nodesEndIndex = 1;
+    }
+
+    SharedPtr<Node> FindNode(Node* nodeToFind)
+    {
+        if (nodeToFind != nullptr)
+        {
+            for (SharedPtr<Node>& node : _nodes)
+            {
+                if (node.get() == nodeToFind)
+                {
+                    return node;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    Iterator FindNodeIterator(Node* nodeToFind)
+    {
+        if (nodeToFind != nullptr)
+        {
+            for (Iterator itr = _nodes.begin(); itr != _nodes.end(); ++itr)
+            {
+                if (itr->get() == nodeToFind)
+                {
+                    return itr;
+                }
+            }
+        }
+        return _nodes.end();
     }
 
     template <class T, class... Args>
-    void MorphNode(Node* morphingNode, Args... args)
+    void MorphNode(Node* node, Args... args)
     {
+        static_assert(std::is_base_of<LSystem::Node, T>::value);
+
+        SharedPtr<Node> morphingNode = FindNode(node);
         if(morphingNode == nullptr)
         {
             return;
         }
 
-        for(unsigned i = 0; i < _nodesEndIndex; ++i)
+        SharedPtr<Node> newNode(new T(*this, std::forward<Args>(args)...));
+
+        // Obtain l-system links to other nodes from morphing node
+        newNode->parent = morphingNode->parent;
+        newNode->edges = morphingNode->edges;
+
+        // Update this edge in source node
+        if (newNode->parent != nullptr)
         {
-            if(_nodes[i].get() == morphingNode)
+            for(SharedPtr<Node>& edge : newNode->parent->edges)
             {
-                SharedPtr<T> newNode(new T(*this, std::forward<Args>(args)...));
-
-                // Obtain l-system links to other nodes from morphing node
-                newNode->source = morphingNode->source;
-                newNode->edges = morphingNode->edges;
-
-                // Update this edge in source node
-                if (newNode->source != nullptr)
+                if(edge == morphingNode)
                 {
-                    for(SharedPtr<Node> edge : newNode->source->edges)
-                    {
-                        if(edge.get() == morphingNode)
-                        {
-                            edge = newNode;
-                            break;
-                        }
-                    }
+                    edge = newNode;
+                    break;
                 }
-
-                // Update source node of edge nodes
-                for(SharedPtr<Node> edge : morphingNode->edges)
-                {
-                    edge->source = newNode;
-                }
-
-                // Replace morphing node with new node
-                _nodes[i] = newNode;
-                break;
             }
+        }
+
+        // Update source node of edge nodes
+        for(SharedPtr<Node> edge : morphingNode->edges)
+        {
+            edge->parent = newNode;
+        }
+
+        ReplaceNode(morphingNode, newNode);
+    }
+
+    void ReplaceNode(SharedPtr<Node>& originalNode, SharedPtr<Node>& newNode)
+    {
+        Iterator itr = std::find(_nodes.begin(), _nodes.end(), originalNode);
+        if (itr != _nodes.end())
+        {
+            (*itr) = newNode;
         }
     }
 
-    void Reserve(unsigned size)
+    template <class T, class... Args>
+    SharedPtr<T> AppendToNode(Node * node, Args... args)
     {
-        _nodes.reserve(size);
+        static_assert(std::is_base_of<LSystem::Node, T>::value);
+
+        Iterator originNodeIterator = FindNodeIterator(node);
+        if (originNodeIterator == _nodes.end())
+        {
+            return nullptr;
+        }
+
+        SharedPtr<T> newNode(new T(*this, std::forward<Args>(args)...));
+        newNode->parent = *originNodeIterator;
+
+        _nodes.insert(++originNodeIterator, newNode);
+        return newNode;
     }
 
     void Grow(unsigned n = 1, void* userData = nullptr)
@@ -97,48 +142,16 @@ public:
 
         while(n--)
         {
-            _isFragmented = false; 
-
-            for(unsigned i = 0; i < _nodes.size(); ++i)
+            for(SharedPtr<Node>& node : _nodes)
             {
-                if(_nodes[i] != nullptr)
+                if(node != nullptr)
                 {
-                    _nodes[i]->Grow(userData);
+                    node->Grow(userData);
                 }
-                else if(i < _nodesEndIndex && !_isFragmented)
-                {
-                    // mark as fragmented if other valid nodes are left
-                    _isFragmented = true;
-                }
-                else
-                {
-                    // we're beyond the last valid node, so there is nothing left to process
-                    break;
-                }
-            }
-
-            if(_isFragmented)
-            {
-                Defragment();
             }
         }
     }
 
 private:
-    void Defragment()
-    {
-        const Iterator end = std::stable_partition(
-            _nodes.begin(),
-            _nodes.end(),
-            [](const SharedPtr<Node>& node) { return node != nullptr; }
-        );
-
-        _nodesEndIndex = static_cast<unsigned>(end - _nodes.begin());
-        _isFragmented = false;
-    }
-
-private:
-    Vector<SharedPtr<Node>> _nodes;
-    unsigned _nodesEndIndex;
-    bool _isFragmented;
+    List<SharedPtr<Node>> _nodes;
 };

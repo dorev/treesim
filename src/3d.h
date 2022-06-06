@@ -1,22 +1,15 @@
 #pragma once
+#include <mat4x4.hpp>
 
-struct Position
+struct Vector3
 {
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
 };
 
-struct Quaternion
+struct Position3D
 {
-    float w = 0.0f;
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-};
-
-struct PosQuat
-{
-    Position position;
-    Quaternion quaternion;
+    Vector3 position;
+    Vector3 rotation;
 };
