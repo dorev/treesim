@@ -71,13 +71,13 @@ public:
         Environment& environment = *reinterpret_cast<Environment*>(userData);
         ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
 
-        IncreaseLength();
+        UseEnergy();
         SpawnNode();
         UpdateChildrenPositions();
     }
 
 private:
-    void IncreaseLength()
+    void UseEnergy()
     {
         if (EnergyStored() < 5)
         {
@@ -112,7 +112,7 @@ private:
 
     void UpdateChildrenPositions()
     {
-        if (edges.empty())
+        if (children.empty())
         {
             return;
         }
@@ -125,4 +125,30 @@ private:
     float _maxLength;
     float _growthModifier;
     bool _hasSpawnedNode;
+};
+
+class Kernel : public LSystem::Node, public Organic
+{
+public:
+    Kernel(LSystem& lsystem, float initialEnergy)
+        : LSystem::Node(lsystem)
+        , Organic(initialEnergy)
+    {
+    }
+
+    virtual void Grow(void* userData) override
+    {
+        if(userData == nullptr)
+        {
+            return;
+        }
+
+        Environment& environment = *reinterpret_cast<Environment*>(userData);
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
+
+        if(EnergyStored() > 100)
+        {
+           lsystem.MorphNode<Stem>(this, EnergyStored());
+        }
+    }
 };

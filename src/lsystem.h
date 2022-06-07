@@ -13,7 +13,7 @@ public:
         LSystem& lsystem;
         Position3D origin;
         SharedPtr<Node> parent;
-        Vector<SharedPtr<Node>> edges;
+        Vector<SharedPtr<Node>> children;
 
         Node(LSystem& lsystem) : lsystem(lsystem)
         {
@@ -82,25 +82,25 @@ public:
 
         // Obtain l-system links to other nodes from morphing node
         newNode->parent = morphingNode->parent;
-        newNode->edges = morphingNode->edges;
+        newNode->children = morphingNode->children;
 
-        // Update this edge in source node
+        // Update this child in source node
         if (newNode->parent != nullptr)
         {
-            for(SharedPtr<Node>& edge : newNode->parent->edges)
+            for(SharedPtr<Node>& child : newNode->parent->children)
             {
-                if(edge == morphingNode)
+                if(child == morphingNode)
                 {
-                    edge = newNode;
+                    child = newNode;
                     break;
                 }
             }
         }
 
-        // Update source node of edge nodes
-        for(SharedPtr<Node> edge : morphingNode->edges)
+        // Update source node of child nodes
+        for(SharedPtr<Node> child : morphingNode->children)
         {
-            edge->parent = newNode;
+            child->parent = newNode;
         }
 
         ReplaceNode(morphingNode, newNode);

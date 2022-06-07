@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "lsystem.h"
-#include "kernel.h"
+#include "plantanatomy.h"
 
 int main()
 {
