@@ -19,17 +19,17 @@ target_compile_options(${PROJECT_NAME}
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
 
-
-set(GLM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/glm")
+set(GLM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tmp/glm")
 include(ExternalProject)
 ExternalProject_Add(glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
     PREFIX ${GLM_DIR}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
-    GIT_REPOSITORY https://github.com/g-truc/glm.git
 )
 ExternalProject_Get_Property(glm source_dir)
 set(GLM_INCLUDE_DIR ${source_dir}/glm)
 target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_INCLUDE_DIR})
+add_dependencies(${PROJECT_NAME} glm)

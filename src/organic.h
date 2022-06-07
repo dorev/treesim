@@ -16,10 +16,11 @@ public:
     float TransferEnergy(Organic& receiver, float amount)
     {
         // Return effectively transferred energy
-        return receiver.GiveEnergy(TakeEnergy(amount));
+        return receiver.ReceiveEnergy(LoseEnergy(amount));
     }
 
-    float GiveEnergy(float energyGiven)
+    // Amount of energy given to organism, returns leftover energy
+    float ReceiveEnergy(float energyGiven)
     {
         float unusedEnergy = 0.0f;
 
@@ -36,7 +37,8 @@ public:
         return unusedEnergy;
     }
 
-    float TakeEnergy(float energyRequested)
+    // Amount of energy given to organism, returns energy taken
+    float LoseEnergy(float energyRequested)
     {
         if(_energyOutputRate != 0.0f && energyRequested <= _energyOutputRate)
         {
@@ -58,7 +60,7 @@ public:
         return energyTaken;
     }
 
-    float GetEnergy() const
+    float EnergyStored() const
     {
         return _energyStored;
     }

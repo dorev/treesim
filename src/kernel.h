@@ -20,11 +20,11 @@ public:
         if(userData != nullptr)
         {
             Environment& environment = *reinterpret_cast<Environment*>(userData);
-            GiveEnergy(environment.GetEnergyAtPosition(origin.position));
+            ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
 
-            if(GetEnergy() > 100)
+            if(EnergyStored() > 100)
             {
-               lsystem.MorphNode<Stem>(this, GetEnergy());
+               lsystem.MorphNode<Stem>(this, EnergyStored());
             }
         }
     }

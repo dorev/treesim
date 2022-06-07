@@ -8,6 +8,6 @@ public:
     float GetEnergyAtPosition(const Vector3& position)
     {
         (void)position;
-        return 10;
+        return 20;
     }
 };
