@@ -2,20 +2,24 @@
 
 #include "types.h"
 #include "3d.h"
+#include "environment.h"
+#include "organic.h"
 
 #include <algorithm>
 
-class LSystem
+class OrganismGraph
 {
 public:
-    struct Node
+    struct Node : public Organic
     {
-        LSystem& lsystem;
-        Position3D origin;
+        OrganismGraph& organism;
+        PosQuat origin;
         SharedPtr<Node> parent;
         Vector<SharedPtr<Node>> children;
 
-        Node(LSystem& lsystem) : lsystem(lsystem)
+        Node(OrganismGraph& organism, float initialEnergy)
+            : Organic(initialEnergy)
+            , organism(organism)
         {
         }
 
@@ -23,7 +27,7 @@ public:
         {
         }
 
-        virtual void Grow(void* userData) = 0;
+        virtual void Grow(Environment& environment) = 0;
     };
 
     using Iterator = List<SharedPtr<Node>>::iterator;
@@ -70,7 +74,7 @@ public:
     template <class T, class... Args>
     void MorphNode(Node* node, Args... args)
     {
-        static_assert(std::is_base_of<LSystem::Node, T>::value);
+        static_assert(std::is_base_of<OrganismGraph::Node, T>::value);
 
         SharedPtr<Node> morphingNode = FindNode(node);
         if(morphingNode == nullptr)
@@ -118,7 +122,7 @@ public:
     template <class T, class... Args>
     SharedPtr<T> AppendToNode(Node * node, Args... args)
     {
-        static_assert(std::is_base_of<LSystem::Node, T>::value);
+        static_assert(std::is_base_of<OrganismGraph::Node, T>::value);
 
         Iterator originNodeIterator = FindNodeIterator(node);
         if (originNodeIterator == _nodes.end())
@@ -133,7 +137,7 @@ public:
         return newNode;
     }
 
-    void Grow(unsigned n = 1, void* userData = nullptr)
+    void Grow(Environment& environment, unsigned n = 1)
     {
         if(_nodes.empty())
         {
@@ -144,10 +148,7 @@ public:
         {
             for(SharedPtr<Node>& node : _nodes)
             {
-                if(node != nullptr)
-                {
-                    node->Grow(userData);
-                }
+                node->Grow(environment);
             }
         }
     }

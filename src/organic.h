@@ -13,9 +13,9 @@ public:
     {
     }
 
+    // Return effectively transferred energy
     float TransferEnergy(Organic& receiver, float amount)
     {
-        // Return effectively transferred energy
         return receiver.ReceiveEnergy(LoseEnergy(amount));
     }
 

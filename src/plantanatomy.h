@@ -1,83 +1,83 @@
 #pragma once
 
-#include <iostream>
-
-#include "lsystem.h"
+#include "organismgraph.h"
 #include "environment.h"
-#include "organic.h"
 
-class Bud : public LSystem::Node, public Organic
+enum class PlantAnatomy
 {
-    public:
-    Bud(LSystem& lsystem, float initialEnergy)
-        : LSystem::Node(lsystem)
-        , Organic(initialEnergy)
+    Kernel,
+    Stem,
+    StemNode,
+    LeafBud,
+    Leaf,
+    FlowerBud,
+    Flower,
+    TerminalBud
+};
+
+#define DECLARE_ANATOMY_ID(plantAnatomyEnum) \
+static constexpr PlantAnatomy anatomyId = PlantAnatomy::plantAnatomyEnum
+
+class LeafBud : public OrganismGraph::Node
+{
+public:
+    DECLARE_ANATOMY_ID(LeafBud);
+
+    LeafBud(OrganismGraph& organism, float initialEnergy)
+        : OrganismGraph::Node(organism, initialEnergy)
     {
     }
 
-    virtual void Grow(void* userData) override
+    virtual void Grow(Environment& environment) override
     {
-        if(userData == nullptr)
-        {
-            return;
-        }
-
-        Environment& environment = *reinterpret_cast<Environment*>(userData);
-        ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin));
     }
 };
 
-class StemNode : public LSystem::Node, public Organic
+class StemNode : public OrganismGraph::Node
 {
 public:
-    StemNode(LSystem& lsystem, float initialEnergy)
-        : LSystem::Node(lsystem)
-        , Organic(initialEnergy)
+    DECLARE_ANATOMY_ID(StemNode);
+
+    StemNode(OrganismGraph& organism, float initialEnergy)
+        : OrganismGraph::Node(organism, initialEnergy)
     {
     }
 
-    virtual void Grow(void* userData) override
+    virtual void Grow(Environment& environment) override
     {
-        if(userData == nullptr)
-        {
-            return;
-        }
-
-        Environment& environment = *reinterpret_cast<Environment*>(userData);
-        ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin));
     }
 };
 
-class Stem : public LSystem::Node, public Organic
+class Stem : public OrganismGraph::Node
 {
 public:
-    Stem(LSystem& lsystem, float initialEnergy)
-        : LSystem::Node(lsystem)
-        , Organic(initialEnergy)
+    DECLARE_ANATOMY_ID(Stem);
+
+    Stem(OrganismGraph& organism, float initialEnergy)
+        : OrganismGraph::Node(organism, initialEnergy)
         , _length(1)
         , _maxLength(20)
         , _growthModifier(0.2f)
         , _hasSpawnedNode(false)
+        , _isFullyGrown(false)
     {
     }
 
-    virtual void Grow(void* userData) override
+    virtual void Grow(Environment& environment) override
     {
-        if(userData == nullptr)
-        {
-            return;
-        }
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin));
 
-        Environment& environment = *reinterpret_cast<Environment*>(userData);
-        ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
-
-        UseEnergy();
+        GrowInternal();
+        UpdateShape();
         SpawnNode();
         UpdateChildrenPositions();
+        TransferEnergyToChildren();
     }
 
 private:
-    void UseEnergy()
+    void GrowInternal()
     {
         if (EnergyStored() < 5)
         {
@@ -90,8 +90,16 @@ private:
         }
         else
         {
-            // Send energy to neighbors
+            _isFullyGrown = true;
+
+            // Consume some energy
+            LoseEnergy(2);
         }
+    }
+
+    void UpdateShape()
+    {
+
     }
 
     void SpawnNode()
@@ -101,12 +109,14 @@ private:
             return;
         }
 
-        SharedPtr<StemNode> stemNode = lsystem.AppendToNode<StemNode>(this, 0.0f);
-        if (stemNode != nullptr)
+        SharedPtr<StemNode> stemNode = organism.AppendToNode<StemNode>(this, 0.0f);
+        if (stemNode)
         {
             TransferEnergy(*stemNode, 75.0f);
-            // Set StemNode position
             _hasSpawnedNode = true;
+
+            // Set StemNode position
+
         }
     }
 
@@ -120,35 +130,60 @@ private:
         // Update children positions if necessary
     }
 
+    void TransferEnergyToChildren()
+    {
+        // Send remaining energy to children
+        if(EnergyStored() > 0)
+        {
+        }
+    }
+
 private:
+    PosQuat end;
     float _length;
     float _maxLength;
     float _growthModifier;
     bool _hasSpawnedNode;
+    bool _isFullyGrown;
 };
 
-class Kernel : public LSystem::Node, public Organic
+class TerminalBud : public OrganismGraph::Node
 {
 public:
-    Kernel(LSystem& lsystem, float initialEnergy)
-        : LSystem::Node(lsystem)
-        , Organic(initialEnergy)
+    DECLARE_ANATOMY_ID(TerminalBud);
+
+    TerminalBud(OrganismGraph& organism, float initialEnergy)
+        : OrganismGraph::Node(organism, initialEnergy)
     {
     }
 
-    virtual void Grow(void* userData) override
+    virtual void Grow(Environment& environment) override
     {
-        if(userData == nullptr)
-        {
-            return;
-        }
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin));
+    }
+};
 
-        Environment& environment = *reinterpret_cast<Environment*>(userData);
-        ReceiveEnergy(environment.GetEnergyAtPosition(origin.position));
+class Kernel : public OrganismGraph::Node
+{
+public:
+    DECLARE_ANATOMY_ID(Kernel);
 
+    Kernel(OrganismGraph& organism, float initialEnergy)
+        : OrganismGraph::Node(organism, initialEnergy)
+    {
+    }
+
+    virtual void Grow(Environment& environment) override
+    {
+        ReceiveEnergy(environment.GetEnergyAtPosition(origin));
         if(EnergyStored() > 100)
         {
-           lsystem.MorphNode<Stem>(this, EnergyStored());
+           SharedPtr<TerminalBud> terminalBud = organism.AppendToNode<TerminalBud>(this, 0.0f);
+           if(terminalBud)
+           {
+               children.push_back(terminalBud);
+           }
+           organism.MorphNode<Stem>(this, EnergyStored());
         }
     }
 };

@@ -5,7 +5,7 @@
 class Environment
 {
 public:
-    float GetEnergyAtPosition(const Vector3& position)
+    float GetEnergyAtPosition(const PosQuat& position)
     {
         (void)position;
         return 20;

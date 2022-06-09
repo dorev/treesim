@@ -1,12 +1,10 @@
-#include <iostream>
-
-#include "lsystem.h"
+#include "organismgraph.h"
 #include "plantanatomy.h"
 
 int main()
 {
-    LSystem lsys;
+    OrganismGraph lsys;
     Environment env;
     lsys.Init<Kernel>(5.0f);
-    lsys.Grow(99, &env);
+    lsys.Grow(env, 99);
 }
